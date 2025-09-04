@@ -4,7 +4,7 @@ import sqlite3
 import hashlib
 import os
 import logging
-from dotenv import load_dotenv  # Добавлено для загрузки .env файла
+from dotenv import load_dotenv
 
 # --- Настройки ---
 load_dotenv()  # Загружаем переменные из .env файла
@@ -13,7 +13,7 @@ load_dotenv()  # Загружаем переменные из .env файла
 TOKEN = os.getenv("DATABASE_BOT_TOKEN")
 if not TOKEN:
     raise ValueError(
-        "Не установлена переменная окружения TELEGRAM_BOT_TOKEN. Создайте файл .env и добавьте в него TOKEN."
+        "Не установлена переменная окружения TELEGRAM_BOT_TOKEN. Создайте файл .env и добавьте в него DATABASE_BOT_TOKEN."
     )
 
 DB_FILE = "users_list.db"

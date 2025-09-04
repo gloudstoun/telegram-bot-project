@@ -3,7 +3,8 @@ from telebot import types
 import requests
 import socket
 import os
-from dotenv import load_dotenv  # Добавлено для загрузки .env файла
+import logging
+from dotenv import load_dotenv
 
 # --- Настройки ---
 load_dotenv()  # Загружаем переменные из .env файла
@@ -11,7 +12,7 @@ load_dotenv()  # Загружаем переменные из .env файла
 TOKEN = os.getenv("NETWORK_BOT_TOKEN")
 if not TOKEN:
     raise ValueError(
-        "Не установлена переменная окружения TELEGRAM_BOT_TOKEN. Создайте файл .env и добавьте в него TOKEN."
+        "Не установлена переменная окружения NETWORK_BOT_TOKEN. Создайте файл .env и добавьте в него NETWORK_BOT_TOKEN."
     )
 
 bot = telebot.TeleBot(TOKEN)
@@ -121,4 +122,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(message)s", handlers=[logging.FileHandler("bot.log")]
+    )
+    try:
+        main()
+    except Exception as e:
+        logging.error(f"Error: {e}")
