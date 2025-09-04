@@ -2,8 +2,18 @@ import telebot
 from telebot import types
 import requests
 import socket
+import os
+from dotenv import load_dotenv  # Добавлено для загрузки .env файла
 
-TOKEN = "7971818454:AAEulezZJGXT0zM4Tje3ATEJCikXnZOGnAQ"
+# --- Настройки ---
+load_dotenv()  # Загружаем переменные из .env файла
+
+TOKEN = os.getenv("NETWORK_BOT_TOKEN")
+if not TOKEN:
+    raise ValueError(
+        "Не установлена переменная окружения TELEGRAM_BOT_TOKEN. Создайте файл .env и добавьте в него TOKEN."
+    )
+
 bot = telebot.TeleBot(TOKEN)
 
 # --- Функции-обработчики ---
