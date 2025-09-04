@@ -7,9 +7,8 @@ import logging
 from dotenv import load_dotenv
 
 # --- Настройки ---
-load_dotenv()  # Загружаем переменные из .env файла
+load_dotenv()
 
-# Безопасно получаем токен из переменной окружения
 TOKEN = os.getenv("DATABASE_BOT_TOKEN")
 if not TOKEN:
     raise ValueError(
@@ -85,7 +84,8 @@ def start_command(message):
     markup.add(types.InlineKeyboardButton("Показать список пользователей", callback_data="show_users"))
 
     try:
-        photo_path = os.path.join("content", "database_bot_photo.png")
+        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        photo_path = os.path.join(script_dir, "content", "database_bot_photo.png")
         with open(photo_path, "rb") as file:
             bot.send_photo(message.chat.id, file)
     except FileNotFoundError:
@@ -161,7 +161,9 @@ def callback_handler(call):
         bot.register_next_step_handler(call.message, process_name_step)
 
 
-# --- Основной запуск ---
+# --- Основная логика запуска ---
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     init_db()
@@ -170,3 +172,7 @@ if __name__ == "__main__":
         bot.infinity_polling()
     except Exception as e:
         logging.error(f"Бот остановлен из-за ошибки: {e}")
+    except KeyboardInterrupt:
+        logging.info("Бот остановлен пользователем.")
+    finally:
+        logging.info("Бот остановлен.")

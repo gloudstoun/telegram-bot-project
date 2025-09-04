@@ -7,7 +7,7 @@ import logging
 from dotenv import load_dotenv
 
 # --- Настройки ---
-load_dotenv()  # Загружаем переменные из .env файла
+load_dotenv()
 
 TOKEN = os.getenv("NETWORK_BOT_TOKEN")
 if not TOKEN:
@@ -25,11 +25,15 @@ def start_command(message):
     markup = types.ReplyKeyboardMarkup()
     btn1 = types.KeyboardButton("/check google.com")
     btn2 = types.KeyboardButton("/portscan 8.8.8.8 53")
-    markup.row(btn1)
-    markup.row(btn2)
+    markup.row(btn1, btn2)
 
-    with open("content\\network_bot_photo.png", "rb") as file:
-        bot.send_photo(message.chat.id, file)
+    try:
+        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        photo_path = os.path.join(script_dir, "content", "network_bot_photo.png")
+        with open(photo_path, "rb") as file:
+            bot.send_photo(message.chat.id, file)
+    except FileNotFoundError:
+        logging.warning("Фото для команды /start не найдено.")
 
     bot.send_message(
         message.chat.id,
@@ -108,24 +112,14 @@ def help_command(message):
 # --- Основная логика запуска ---
 
 
-def main():
-    """
-    Основная функция для запуска бота.
-    """
-    print("Сетевой бот запущен...")
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.info("Бот для работы с сетями запущен...")
     try:
         bot.infinity_polling()
     except Exception as e:
-        print(f"Бот остановлен из-за ошибки: {e}")
+        logging.error(f"Бот остановлен из-за ошибки: {e}")
+    except KeyboardInterrupt:
+        logging.info("Бот остановлен пользователем.")
     finally:
-        print("Бот остановлен.")
-
-
-if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(message)s", handlers=[logging.FileHandler("bot.log")]
-    )
-    try:
-        main()
-    except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.info("Бот остановлен.")
