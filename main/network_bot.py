@@ -1,3 +1,4 @@
+from email.mime import message
 import telebot
 from telebot import types
 import requests
@@ -28,7 +29,7 @@ def start_command(message):
     markup.row(btn1, btn2)
 
     try:
-        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        script_dir = os.path.dirname(os.path.abspath(__file__))
         photo_path = os.path.join(script_dir, "content", "network_bot_photo.png")
         with open(photo_path, "rb") as file:
             bot.send_photo(message.chat.id, file)

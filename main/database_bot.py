@@ -84,7 +84,7 @@ def start_command(message):
     markup.add(types.InlineKeyboardButton("Показать список пользователей", callback_data="show_users"))
 
     try:
-        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        script_dir = os.path.dirname(os.path.abspath(__file__))
         photo_path = os.path.join(script_dir, "content", "database_bot_photo.png")
         with open(photo_path, "rb") as file:
             bot.send_photo(message.chat.id, file)
@@ -103,8 +103,8 @@ def start_command(message):
 def process_name_step(message):
     """Обрабатывает ввод имени пользователя."""
     username = message.text.strip()
-    if not username:
-        bot.send_message(message.chat.id, "Имя не может быть пустым. Попробуйте снова:")
+    if not username or not username.isalpha():
+        bot.send_message(message.chat.id, "Имя не может быть пустым и должно содержать только буквы. Попробуйте снова:")
         bot.register_next_step_handler(message, process_name_step)
         return
 
