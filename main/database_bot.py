@@ -4,12 +4,17 @@ import sqlite3
 import hashlib
 import os
 import logging
+from dotenv import load_dotenv  # Добавлено для загрузки .env файла
 
 # --- Настройки ---
+load_dotenv()  # Загружаем переменные из .env файла
+
 # Безопасно получаем токен из переменной окружения
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TOKEN = os.getenv("DATABASE_BOT_TOKEN")
 if not TOKEN:
-    raise ValueError("Не установлена переменная окружения TELEGRAM_BOT_TOKEN")
+    raise ValueError(
+        "Не установлена переменная окружения TELEGRAM_BOT_TOKEN. Создайте файл .env и добавьте в него TOKEN."
+    )
 
 DB_FILE = "users_list.db"
 bot = telebot.TeleBot(TOKEN)
@@ -162,6 +167,6 @@ if __name__ == "__main__":
     init_db()
     logging.info("Бот для работы с БД запущен...")
     try:
-        bot.infinity_polling(non_stop=True)
+        bot.infinity_polling()
     except Exception as e:
         logging.error(f"Бот остановлен из-за ошибки: {e}")
