@@ -38,6 +38,9 @@ def init_db():
 
 
 def hash_password(password):
+    """Хэширует пароль с помощью SHA-256."""
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
 def add_user(name, password):
     """Добавляет нового пользователя в базу данных, если имя не занято."""
     conn = sqlite3.connect(DB_FILE)
@@ -54,11 +57,6 @@ def add_user(name, password):
     cur.close()
     conn.close()
     return True  # Успешно добавлен
-    cur.execute("INSERT INTO users (name, pass_hash) VALUES (?, ?)", (name, pass_hash))
-    conn.commit()
-    cur.close()
-    conn.close()
-
 
 def get_all_users():
     """Получает список всех пользователей из базы данных."""
@@ -79,7 +77,6 @@ def start_command(message):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("Показать список пользователей", callback_data="show_users"))
     markup.add(types.InlineKeyboardButton("Регистрация нового пользователя", callback_data="registration"))
-    ""))
 
     photo_path = os.path.join("content", "database_bot_photo.png")
     with open(photo_path, "rb") as file:
