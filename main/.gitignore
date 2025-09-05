@@ -1,0 +1,8 @@
+# DB file
+users_list.db
+
+# Content directory
+content/
+
+# Environment file
+.env
