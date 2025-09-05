@@ -9,43 +9,79 @@ from dotenv import load_dotenv
 # --- Настройки ---
 load_dotenv()
 
-TOKEN = os.getenv("DATABASE_BOT_TOKEN")
+TOKEN = os.getenv("DATABASE_BOT_TOKEN")  # Токен бота из .env файла
+CONTENT_DIR = "content"  # Папка для хранения контента бота
+BOT_PHOTO = "database_bot_photo.png"  # Имя файла с фото бота
+MIN_PASSWORD_LENGTH = 8  # Минимальная длина пароля
+DB_FILE = "users_list.db"  # Файл базы данных
+
 if not TOKEN:
     raise ValueError(
-        "Не установлена переменная окружения TELEGRAM_BOT_TOKEN. Создайте файл .env и добавьте в него DATABASE_BOT_TOKEN."
+        "Не установлена переменная окружения DATABASE_BOT_TOKEN. Создайте файл .env и добавьте в него DATABASE_BOT_TOKEN."
     )
 
-DB_FILE = "users_list.db"
 bot = telebot.TeleBot(TOKEN)
+
 
 # --- Управление базой данных ---
 
 
 def init_db():
-    """Инициализирует базу данных и создает таблицу, если ее нет."""
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute(
-        """
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        pass_hash TEXT NOT NULL
-    )
     """
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
+    Инициализирует базу данных и создает таблицу, если ее нет.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                pass_hash TEXT NOT NULL
+            )
+        """
+        )
+        conn.commit()
+        logging.info("База данных успешно инициализирована")
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка при инициализации БД: {e}")
+        raise
+    finally:
+        cur.close()
+        conn.close()
 
 
 def hash_password(password):
-    """Хэширует пароль с помощью SHA-256."""
+    """
+    Хэширует пароль с помощью SHA-256.
+
+    Args:
+        password (str): Пароль для хэширования
+
+    Returns:
+        str: Хэшированный пароль
+    """
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def add_user(name, password):
-    """Добавляет нового пользователя в базу данных, если имя не занято."""
+    """
+    Добавляет нового пользователя в базу данных, если имя не занято.
+
+    Args:
+        name (str): Имя пользователя
+        password (str): Пароль пользователя
+
+    Returns:
+        bool: True, если пользователь успешно добавлен, False если имя занято
+    """
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     # Проверяем, существует ли пользователь с таким именем
@@ -64,7 +100,15 @@ def add_user(name, password):
 
 
 def get_all_users():
-    """Получает список всех пользователей из базы данных."""
+    """
+    Получает список всех пользователей из базы данных.
+
+    Args:
+        None
+
+    Returns:
+        list of tuples: Список пользователей в формате (id, name)
+    """
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     cur.execute("SELECT id, name FROM users")
@@ -77,15 +121,43 @@ def get_all_users():
 # --- Обработчики команд Telegram ---
 
 
+def get_main_keyboard():
+    """
+    Создает основную клавиатуру бота.
+
+    Args:
+        None
+
+    Returns:
+        telebot.types.ReplyKeyboardMarkup: Клавиатура с основными командами
+    """
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    buttons = [
+        types.KeyboardButton("👤 Регистрация"),
+        types.KeyboardButton("📋 Список пользователей"),
+        types.KeyboardButton("❓ Помощь"),
+    ]
+    markup.add(*buttons)
+    return markup
+
+
 @bot.message_handler(commands=["start"])
 def start_command(message):
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("Регистрация нового пользователя", callback_data="registration"))
-    markup.add(types.InlineKeyboardButton("Показать список пользователей", callback_data="show_users"))
+    """
+    Приветствие пользователя и показ клавиатуры с командами.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя
+
+    Returns:
+        None
+    """
+    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    markup = get_main_keyboard()
 
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        photo_path = os.path.join(script_dir, "content", "database_bot_photo.png")
+        photo_path = os.path.join(script_dir, CONTENT_DIR, BOT_PHOTO)
         with open(photo_path, "rb") as file:
             bot.send_photo(message.chat.id, file)
     except FileNotFoundError:
@@ -94,27 +166,53 @@ def start_command(message):
     bot.send_message(
         message.chat.id,
         f"<b>Привет</b>, <em>{message.from_user.first_name}</em>, <b>тебя приветствует SimpleRegistryBot!</b>\n"
-        "Выбери действие:",
+        f"Этот бот позволяет регистрировать пользователей и хранить их в базе данных SQLite.\n"
+        f"Используй кнопки ниже или введи команду для начала работы.",
         parse_mode="html",
         reply_markup=markup,
     )
 
 
+@bot.message_handler(commands=["registration"])
 def process_name_step(message):
-    """Обрабатывает ввод имени пользователя."""
+    """
+    Обрабатывает ввод имени пользователя.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя с именем
+
+    Returns:
+        None
+    """
+    markup = get_main_keyboard()
+    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+
+    if message.text == "/registration":
+        bot.send_message(message.chat.id, "Пожалуйста, введите ваше имя (только буквы):", reply_markup=markup)
+
     username = message.text.strip()
+    response_message = ""
     if not username or not username.isalpha():
-        bot.send_message(message.chat.id, "Имя не может быть пустым и должно содержать только буквы. Попробуйте снова:")
+        response_message = "Имя не может быть пустым и должно содержать только буквы. Попробуйте снова:"
         bot.register_next_step_handler(message, process_name_step)
         return
 
-    bot.send_message(message.chat.id, "Отлично! Теперь введите пароль:")
+    response_message = "Отлично! Теперь введите пароль:"
+    bot.send_message(message.chat.id, response_message)
     bot.register_next_step_handler(message, process_password_step, username)
 
 
 def is_strong_password(password):
-    """Проверяет надежность пароля: минимум 8 символов, буквы и цифры."""
-    if len(password) < 8:
+    """
+    Проверяет надежность пароля: минимум 8 символов, буквы и цифры.
+
+    Args:
+        password (str): Пароль для проверки
+
+    Returns:
+        bool: True если пароль надежный, иначе False
+    """
+    if len(password) < MIN_PASSWORD_LENGTH:
         return False
     has_letter = any(c.isalpha() for c in password)
     has_digit = any(c.isdigit() for c in password)
@@ -122,30 +220,76 @@ def is_strong_password(password):
 
 
 def process_password_step(message, username):
-    """Обрабатывает пароль и завершает регистрацию."""
+    """
+    Обрабатывает пароль и завершает регистрацию.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя с паролем
+        username (str): Имя пользователя, введенное ранее
+
+    Returns:
+        None
+    """
+    response_message = ""
+    markup = get_main_keyboard()
+
     password = message.text.strip()
     if not is_strong_password(password):
-        bot.send_message(
-            message.chat.id, "Пароль должен быть не менее 8 символов и содержать буквы и цифры. Попробуйте снова:"
-        )
+        response_message = "Пароль должен быть не менее 8 символов и содержать буквы и цифры. Попробуйте снова:"
         bot.register_next_step_handler(message, process_password_step, username)
         return
 
     if add_user(username, password):
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("Показать список пользователей", callback_data="show_users"))
-        bot.send_message(message.chat.id, "Вы успешно зарегистрированы!", reply_markup=markup)
+        response_message = "Вы успешно зарегистрированы!"
     else:
-        bot.send_message(
-            message.chat.id, "Это имя уже занято. Пожалуйста, начните регистрацию заново с другим именем: /registration"
-        )
+        response_message = "Это имя уже занято. Пожалуйста, начните регистрацию заново с другим именем: /registration"
+
+    bot.send_message(message.chat.id, response_message, reply_markup=markup)
 
 
-@bot.callback_query_handler(func=lambda call: True)
-def callback_handler(call):
-    """Обрабатывает нажатия на все inline-кнопки."""
-    if call.data == "show_users":
-        bot.answer_callback_query(call.id, "Загружаю список...")
+@bot.message_handler(commands=["help"])
+def help_command(message):
+    """
+    Отправляет пользователю список доступных команд.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя, содержащее команду
+
+    Returns:
+        None
+    """
+    markup = get_main_keyboard()
+    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+
+    message_info = f"""<b>Доступные команды:</b>
+    /help - Показать это сообщение
+    /start - Перезапустить бота и показать главное меню
+    /registration - Начать процесс регистрации нового пользователя
+    /list - Показать список всех зарегистрированных пользователей
+    """
+
+    bot.send_message(message.chat.id, message_info, parse_mode="HTML", reply_markup=markup)
+
+
+@bot.message_handler(content_types=["text"])
+def handle_text(message):
+    """
+    Обрабатывает текстовые сообщения от пользователей.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя
+
+    Returns:
+        None
+    """
+    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    markup = get_main_keyboard()
+
+    if message.text == "👤 Регистрация":
+        bot.send_message(message.chat.id, "Пожалуйста, введите ваше имя (только буквы):", reply_markup=markup)
+        bot.register_next_step_handler(message, process_name_step)
+
+    elif message.text == "📋 Список пользователей":
         users = get_all_users()
         if not users:
             info = "В базе данных пока нет пользователей."
@@ -153,12 +297,13 @@ def callback_handler(call):
             info = "Зарегистрированные пользователи:\n\n"
             for user_id, name in users:
                 info += f"ID: {user_id}, Имя: {name}\n"
-        bot.send_message(call.message.chat.id, info)
+        bot.send_message(message.chat.id, info, reply_markup=markup)
 
-    elif call.data == "registration":
-        bot.answer_callback_query(call.id)
-        bot.send_message(call.message.chat.id, "Введите ваше имя для регистрации:")
-        bot.register_next_step_handler(call.message, process_name_step)
+    elif message.text == "❓ Помощь":
+        help_command(message)
+
+    else:
+        bot.reply_to(message, "Неизвестная команда. Введите /help для списка доступных команд.", reply_markup=markup)
 
 
 # --- Основная логика запуска ---
