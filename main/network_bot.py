@@ -4,6 +4,9 @@ import requests
 import socket
 import os
 import logging
+import ipaddress
+import re
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 # --- Настройки ---
@@ -24,6 +27,84 @@ if not TOKEN:
     )
 
 bot = telebot.TeleBot(TOKEN)
+
+# --- Функции валидации ---
+
+
+def validate_ip(ip):
+    """
+    Проверяет корректность IP-адреса (IPv4 или IPv6).
+
+    Args:
+        ip (str): IP-адрес для проверки
+
+    Returns:
+        bool: True если IP корректный, False иначе
+    """
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except ValueError:
+        return False
+
+
+def validate_port(port):
+    """
+    Проверяет корректность номера порта.
+
+    Args:
+        port (int): Номер порта для проверки
+
+    Returns:
+        bool: True если порт корректный, False иначе
+    """
+    try:
+        port_int = int(port)
+        return 1 <= port_int <= 65535
+    except (ValueError, TypeError):
+        return False
+
+
+def validate_url(url):
+    """
+    Проверяет корректность URL.
+
+    Args:
+        url (str): URL для проверки
+
+    Returns:
+        bool: True если URL корректный, False иначе
+    """
+    try:
+        # Добавляем протокол если его нет
+        if not url.startswith(("http://", "https://")):
+            url = "http://" + url
+
+        parsed = urlparse(url)
+        # Проверяем что есть домен и он не пустой
+        return bool(parsed.netloc) and "." in parsed.netloc
+    except Exception:
+        return False
+
+
+def validate_domain(domain):
+    """
+    Проверяет корректность доменного имени.
+
+    Args:
+        domain (str): Доменное имя для проверки
+
+    Returns:
+        bool: True если домен корректный, False иначе
+    """
+    # Простая проверка домена: содержит точки, не пустой, допустимые символы
+    if not domain or len(domain) > 253:
+        return False
+
+    # Проверяем что домен содержит только допустимые символы
+    domain_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"
+    return bool(re.match(domain_pattern, domain))
+
 
 # --- Функции-обработчики ---
 
@@ -102,6 +183,13 @@ def check_command(message):
 
     try:
         url = message.text.split()[1]
+
+        # Валидация URL
+        if not validate_url(url):
+            response_message = "❌ Неверный формат URL. Пример: /check google.com"
+            bot.send_message(message.chat.id, response_message, reply_markup=markup)
+            return
+
         if not url.startswith("http"):
             url = "http://" + url
 
@@ -118,6 +206,8 @@ def check_command(message):
     except requests.ConnectionError:
         url_to_report = message.text.split()[1] if len(message.text.split()) > 1 else "указанный сайт"
         response_message = f"❌ Ошибка: Не удалось подключиться к сайту {url_to_report}."
+    except requests.Timeout:
+        response_message = "⏰ Таймаут: Сайт не отвечает в течение 5 секунд."
     except Exception as e:
         response_message = f"Произошла непредвиденная ошибка: {e}"
 
@@ -158,9 +248,27 @@ def portscan_command(message):
 
     try:
         parts = message.text.split()
-        ip = parts[1]
-        port = int(parts[2])
+        if len(parts) < 3:
+            response_message = "Пожалуйста, укажите IP-адрес и порт. Пример: /portscan 8.8.8.8 53"
+            bot.send_message(message.chat.id, response_message, reply_markup=markup)
+            return
 
+        ip = parts[1]
+        port_str = parts[2]
+
+        # Валидация IP-адреса
+        if not validate_ip(ip):
+            response_message = f"❌ Неверный IP-адрес: {ip}. Пример: /portscan 8.8.8.8 53"
+            bot.send_message(message.chat.id, response_message, reply_markup=markup)
+            return
+
+        # Валидация порта
+        if not validate_port(port_str):
+            response_message = f"❌ Неверный номер порта: {port_str}. Порт должен быть от 1 до 65535."
+            bot.send_message(message.chat.id, response_message, reply_markup=markup)
+            return
+
+        port = int(port_str)
         bot.reply_to(message, f"Сканирую порт {port} на {ip}...")
 
         if check_port(ip, port):
@@ -168,8 +276,8 @@ def portscan_command(message):
         else:
             response_message = f"❌ Порт {port} на {ip} закрыт."
 
-    except (IndexError, ValueError):
-        response_message = "Пожалуйста, укажите IP-адрес и порт. Пример: /portscan 8.8.8.8 53"
+    except (IndexError, ValueError) as e:
+        response_message = f"❌ Ошибка в параметрах: {e}. Пример: /portscan 8.8.8.8 53"
     except Exception as e:
         response_message = f"Произошла ошибка: {e}"
 
