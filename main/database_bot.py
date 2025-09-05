@@ -10,10 +10,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TOKEN = os.getenv("DATABASE_BOT_TOKEN")  # Токен бота из .env файла
-CONTENT_DIR = "content"  # Папка для хранения контента бота
-BOT_PHOTO = "database_bot_photo.png"  # Имя файла с фото бота
 MIN_PASSWORD_LENGTH = 8  # Минимальная длина пароля
-DB_FILE = "users_list.db"  # Файл базы данных
+BOT_PHOTO = "database_bot_photo.png"  # Имя файла с фото бота
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # Директория скрипта
+CONTENT_DIR = os.path.join(SCRIPT_DIR, "content")  # Директория с контентом
+DB_FILE = os.path.join(SCRIPT_DIR, "users_list.db")  # Файл базы данных
 
 if not TOKEN:
     raise ValueError(
