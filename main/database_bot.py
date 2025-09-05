@@ -54,8 +54,10 @@ def init_db():
         logging.error(f"Ошибка при инициализации БД: {e}")
         raise
     finally:
-        cur.close()
-        conn.close()
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 def hash_password(password):
@@ -80,23 +82,51 @@ def add_user(name, password):
         password (str): Пароль пользователя
 
     Returns:
-        bool: True, если пользователь успешно добавлен, False если имя занято
+        bool: True если пользователь успешно добавлен, False если имя уже занято
     """
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    # Проверяем, существует ли пользователь с таким именем
-    cur.execute("SELECT id FROM users WHERE name = ?", (name,))
-    if cur.fetchone():
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cur = conn.cursor()
+
+        pass_hash = hash_password(password)
+        cur.execute("INSERT INTO users (name, pass_hash) VALUES (?, ?)", (name, pass_hash))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        logging.warning("Имя уже занято")
+        return False  # Имя уже занято
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка при добавлении пользователя: {e}")
+        return False  # Ошибка при добавлении пользователя
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+    return True  # Пользователь успешно добавлен
+
+
+def is_name_taken(name):
+    """
+    Проверяет, занято ли имя пользователя в базе данных.
+
+    Args:
+        name (str): Имя пользователя для проверки
+
+    Returns:
+        bool: True если имя занято, иначе False
+    """
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM users WHERE name = ?", (name,))
+        is_taken = cur.fetchone() is not None
+        return is_taken
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка при проверке занятости имени: {e}")
+        return False
+    finally:
         cur.close()
         conn.close()
-        return False  # Имя занято
-
-    pass_hash = hash_password(password)
-    cur.execute("INSERT INTO users (name, pass_hash) VALUES (?, ?)", (name, pass_hash))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return True  # Успешно добавлен
 
 
 def get_all_users():
@@ -173,7 +203,19 @@ def start_command(message):
     )
 
 
-@bot.message_handler(commands=["registration"])
+def is_valid_name(name):
+    """
+    Проверяет, что имя состоит только из букв и не пустое.
+
+    Args:
+        name (str): Имя для проверки
+
+    Returns:
+        bool: True если имя валидно, иначе False
+    """
+    return bool(name) and name.isalpha()
+
+
 def process_name_step(message):
     """
     Обрабатывает ввод имени пользователя.
@@ -186,18 +228,24 @@ def process_name_step(message):
     """
     markup = get_main_keyboard()
     logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
-
-    if message.text == "/registration":
-        bot.send_message(message.chat.id, "Пожалуйста, введите ваше имя (только буквы):", reply_markup=markup)
-
-    username = message.text.strip()
     response_message = ""
-    if not username or not username.isalpha():
-        response_message = "Имя не может быть пустым и должно содержать только буквы. Попробуйте снова:"
+    username = message.text.strip()
+
+    if is_name_taken(username):
+        bot.send_message(
+            message.chat.id,
+            "Это имя уже занято. Пожалуйста, начните регистрацию заново с другим именем: /registration",
+            reply_markup=markup,
+        )
+        return
+
+    if not is_valid_name(username):
+        bot.send_message(message.chat.id, "Имя не может быть пустым и должно содержать только буквы. Попробуйте снова:")
         bot.register_next_step_handler(message, process_name_step)
         return
 
-    response_message = "Отлично! Теперь введите пароль:"
+    response_message = "Отлично! Теперь введите пароль (минимум 8 символов, буквы и цифры):"
+
     bot.send_message(message.chat.id, response_message)
     bot.register_next_step_handler(message, process_password_step, username)
 
@@ -235,19 +283,20 @@ def process_password_step(message, username):
 
     password = message.text.strip()
     if not is_strong_password(password):
-        response_message = "Пароль должен быть не менее 8 символов и содержать буквы и цифры. Попробуйте снова:"
+        bot.send_message(
+            message.chat.id, "Пароль должен быть не менее 8 символов и содержать буквы и цифры. Попробуйте снова:"
+        )
         bot.register_next_step_handler(message, process_password_step, username)
         return
 
     if add_user(username, password):
-        response_message = "Вы успешно зарегистрированы!"
+        response_message = f"Пользователь <b>{username}</b> успешно зарегистрирован!"
     else:
-        response_message = "Это имя уже занято. Пожалуйста, начните регистрацию заново с другим именем: /registration"
+        response_message = "Ошибка при регистрации. Попробуйте снова."
 
-    bot.send_message(message.chat.id, response_message, reply_markup=markup)
+    bot.send_message(message.chat.id, response_message, reply_markup=markup, parse_mode="HTML")
 
 
-@bot.message_handler(commands=["help"])
 def help_command(message):
     """
     Отправляет пользователю список доступных команд.
@@ -285,11 +334,11 @@ def handle_text(message):
     logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
     markup = get_main_keyboard()
 
-    if message.text == "👤 Регистрация":
+    if message.text == "👤 Регистрация" or message.text == "/registration":
         bot.send_message(message.chat.id, "Пожалуйста, введите ваше имя (только буквы):", reply_markup=markup)
         bot.register_next_step_handler(message, process_name_step)
 
-    elif message.text == "📋 Список пользователей":
+    elif message.text == "📋 Список пользователей" or message.text == "/list":
         users = get_all_users()
         if not users:
             info = "В базе данных пока нет пользователей."
@@ -299,7 +348,7 @@ def handle_text(message):
                 info += f"ID: {user_id}, Имя: {name}\n"
         bot.send_message(message.chat.id, info, reply_markup=markup)
 
-    elif message.text == "❓ Помощь":
+    elif message.text == "❓ Помощь" or message.text == "/help":
         help_command(message)
 
     else:
