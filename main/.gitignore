@@ -6,3 +6,5 @@ content/
 
 # Environment file
 .env
+*.png
+*.jpg
