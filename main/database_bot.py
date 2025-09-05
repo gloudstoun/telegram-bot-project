@@ -171,6 +171,22 @@ def get_main_keyboard():
     return markup
 
 
+def get_back_keyboard():
+    """
+    Создает клавиатуру с кнопкой "Назад".
+
+    Args:
+        None
+
+    Returns:
+        telebot.types.ReplyKeyboardMarkup: Клавиатура с кнопкой "Назад"
+    """
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+    back_button = types.KeyboardButton("🔙 Назад")
+    markup.add(back_button)
+    return markup
+
+
 @bot.message_handler(commands=["start"])
 def start_command(message):
     """
@@ -183,7 +199,7 @@ def start_command(message):
         None
     """
     logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
-    markup = get_main_keyboard()
+    markup_main = get_main_keyboard()
 
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -199,7 +215,7 @@ def start_command(message):
         f"Этот бот позволяет регистрировать пользователей и хранить их в базе данных SQLite.\n"
         f"Используй кнопки ниже или введи команду для начала работы.",
         parse_mode="html",
-        reply_markup=markup,
+        reply_markup=markup_main,
     )
 
 
@@ -226,27 +242,42 @@ def process_name_step(message):
     Returns:
         None
     """
-    markup = get_main_keyboard()
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
     response_message = ""
-    username = message.text.strip()
+    markup_back = get_back_keyboard()
+    markup_main = get_main_keyboard()
 
-    if is_name_taken(username):
+    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+
+    if message.text == "🔙 Назад" or message.text == "/back":
         bot.send_message(
             message.chat.id,
-            "Это имя уже занято. Пожалуйста, начните регистрацию заново с другим именем: /registration",
-            reply_markup=markup,
+            "Вы вернулись в главное меню. Введите /help для списка доступных команд.",
+            reply_markup=markup_main,
         )
         return
 
+    username = message.text.strip()
+    if is_name_taken(username):
+        bot.send_message(
+            message.chat.id,
+            "Это имя уже занято. Попробуйте другое: ",
+            reply_markup=markup_back,
+        )
+        bot.register_next_step_handler(message, process_name_step)
+        return
+
     if not is_valid_name(username):
-        bot.send_message(message.chat.id, "Имя не может быть пустым и должно содержать только буквы. Попробуйте снова:")
+        bot.send_message(
+            message.chat.id,
+            "Имя не может быть пустым и должно содержать только буквы. Попробуйте снова:",
+            reply_markup=markup_back,
+        )
         bot.register_next_step_handler(message, process_name_step)
         return
 
     response_message = "Отлично! Теперь введите пароль (минимум 8 символов, буквы и цифры):"
 
-    bot.send_message(message.chat.id, response_message)
+    bot.send_message(message.chat.id, response_message, reply_markup=markup_back)
     bot.register_next_step_handler(message, process_password_step, username)
 
 
@@ -279,12 +310,25 @@ def process_password_step(message, username):
         None
     """
     response_message = ""
-    markup = get_main_keyboard()
+    markup_back = get_back_keyboard()
+    markup_main = get_main_keyboard()
+
+    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+
+    if message.text == "🔙 Назад" or message.text == "/back":
+        bot.send_message(
+            message.chat.id,
+            "Вы вернулись в главное меню. Введите /help для списка доступных команд.",
+            reply_markup=markup_main,
+        )
+        return
 
     password = message.text.strip()
     if not is_strong_password(password):
         bot.send_message(
-            message.chat.id, "Пароль должен быть не менее 8 символов и содержать буквы и цифры. Попробуйте снова:"
+            message.chat.id,
+            "Пароль должен быть не менее 8 символов и содержать буквы и цифры. Попробуйте снова:",
+            reply_markup=markup_back,
         )
         bot.register_next_step_handler(message, process_password_step, username)
         return
@@ -294,7 +338,7 @@ def process_password_step(message, username):
     else:
         response_message = "Ошибка при регистрации. Попробуйте снова."
 
-    bot.send_message(message.chat.id, response_message, reply_markup=markup, parse_mode="HTML")
+    bot.send_message(message.chat.id, response_message, reply_markup=markup_main, parse_mode="HTML")
 
 
 def help_command(message):
@@ -307,7 +351,7 @@ def help_command(message):
     Returns:
         None
     """
-    markup = get_main_keyboard()
+    markup_main = get_main_keyboard()
     logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
 
     message_info = f"""<b>Доступные команды:</b>
@@ -317,7 +361,7 @@ def help_command(message):
     /list - Показать список всех зарегистрированных пользователей
     """
 
-    bot.send_message(message.chat.id, message_info, parse_mode="HTML", reply_markup=markup)
+    bot.send_message(message.chat.id, message_info, parse_mode="HTML", reply_markup=markup_main)
 
 
 @bot.message_handler(content_types=["text"])
@@ -332,12 +376,12 @@ def handle_text(message):
         None
     """
     logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
-    markup = get_main_keyboard()
+    markup_main = get_main_keyboard()
+    markup_back = get_back_keyboard()
 
     if message.text == "👤 Регистрация" or message.text == "/registration":
-        bot.send_message(message.chat.id, "Пожалуйста, введите ваше имя (только буквы):", reply_markup=markup)
+        bot.send_message(message.chat.id, "Пожалуйста, введите ваше имя (только буквы):", reply_markup=markup_back)
         bot.register_next_step_handler(message, process_name_step)
-
     elif message.text == "📋 Список пользователей" or message.text == "/list":
         users = get_all_users()
         if not users:
@@ -346,13 +390,13 @@ def handle_text(message):
             info = "Зарегистрированные пользователи:\n\n"
             for user_id, name in users:
                 info += f"ID: {user_id}, Имя: {name}\n"
-        bot.send_message(message.chat.id, info, reply_markup=markup)
-
+        bot.send_message(message.chat.id, info, reply_markup=markup_main)
     elif message.text == "❓ Помощь" or message.text == "/help":
         help_command(message)
-
     else:
-        bot.reply_to(message, "Неизвестная команда. Введите /help для списка доступных команд.", reply_markup=markup)
+        bot.reply_to(
+            message, "Неизвестная команда. Введите /help для списка доступных команд.", reply_markup=markup_main
+        )
 
 
 # --- Основная логика запуска ---
