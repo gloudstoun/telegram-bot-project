@@ -51,12 +51,14 @@ This repository serves as a showcase of my progress in backend development and P
 
 ````markdown
 ## 🚀 How to Run
+````
 
 1. Clone the repository:  
    ```bash
    git clone https://github.com/gloudstoun/telegram-bot-project.git
    cd telegram-bot-project
-   ```
+
+
 2. Create and activate a virtual environment:
 
    ```bash
@@ -90,4 +92,3 @@ This repository serves as a showcase of my progress in backend development and P
    ```bash
    python database_bot.py
    ```
-````
