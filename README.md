@@ -1,69 +1,93 @@
-Hello and welcome to my Telegram bots portfolio!
+# Telegram Bot Projects
 
-This repository is a collection of three projects built with Python to hone my programming skills and explore various technologies. Each bot solves a unique problem and demonstrates my abilities in software development, API integration, and building reliable applications.
+A personal portfolio of **Telegram bots written in Python**, created to practice and demonstrate skills in API integration, database management, networking, and error handling.  
+This repository serves as a showcase of my progress in backend development and Python programming.
 
-⚙️ Technologies and Skills
-Python: The primary programming language used throughout the projects.
+---
 
-pyTelegramBotAPI: The framework I confidently use for creating bots.
+## 📋 Table of Contents
 
-Data Management:
+- [Goal](#goal)  
+- [Projects](#projects)  
+- [Technologies & Skills](#technologies--skills)  
+- [How to Run](#how-to-run)  
+- [Project Structure](#project-structure)  
+- [What I Learned](#what-i-learned)  
+- [Contacts](#contacts)  
 
-SQLite: Working with a local database to store user data.
+---
 
-hashlib: Implementing secure password storage through hashing.
+## 🎯 Goal
 
-API Integration:
+- To build practical Telegram bots and strengthen my understanding of Python.  
+- To demonstrate the ability to work with APIs, handle errors, manage user data, and implement secure solutions.  
+- To create a portfolio project that reflects not only working results but also clean code and good development practices.  
 
-requests: Integrating with external APIs, such as OpenWeatherMap.
+---
 
-JSON Parsing: Processing data received from API responses.
+## 🤖 Projects
 
-Network Programming:
+| Project         | Description                                                                 | Key Features |
+|-----------------|-----------------------------------------------------------------------------|--------------|
+| **Database Bot** | User registration bot with database support and secure password hashing.    | Data input & validation, SQLite database, hashed password storage |
+| **Network Bot**  | Network diagnostic bot that checks website availability and open ports.     | `/check` (website status), `/portscan` commands, error handling |
+| **Weather Bot**  | Weather information bot using OpenWeatherMap API.                          | Fetches weather by city name, formatted results, API integration |
 
-socket: Basic socket programming for port checking.
+---
 
-ipaddress: Validating IP addresses.
+## 🧰 Technologies & Skills
 
-Security and Configuration:
+- **Python** (3.x)  
+- **Telegram Bot Frameworks**: `pyTelegramBotAPI`  
+- **APIs**: OpenWeatherMap and others  
+- **Database**: SQLite (with secure password hashing)  
+- **Networking**: `socket`, `ipaddress` modules for diagnostics  
+- **Environment variables** with `.env` for secrets  
+- **Error handling** and input validation  
+- **Version control**: Git, GitHub  
 
-python-dotenv: Managing secret keys (tokens and API keys) via environment variables, a key best practice.
+---
 
-Error Handling:
 
-Using try-except blocks to ensure application resilience against network errors, bad requests, and other exceptions.
+````markdown
+## 🚀 How to Run
 
-🚀 Projects
-1. Database Bot
-A user registration bot that securely stores data in an SQLite database. This project showcases my skills in data security, input validation, and database interaction.
+1. Clone the repository:  
+   ```bash
+   git clone https://github.com/gloudstoun/telegram-bot-project.git
+   cd telegram-bot-project
+   ```
+2. Create and activate a virtual environment:
 
-Key Functions: user registration, name uniqueness validation, and password hashing.
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate   # Linux / MacOS
+   venv\Scripts\activate      # Windows
+   ```
 
-2. Network Bot
-A network diagnostics bot that can check website availability and scan for open ports. This is an excellent demonstration of my network programming skills and ability to work with low-level protocols (HTTP, TCP).
+3. Install dependencies:
 
-Key Functions: website status checks (/check), and port scanning (/portscan).
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-3. Weather Bot
-A simple and elegant bot that provides real-time weather information. This project highlights my ability to integrate with external APIs, process data, and present it in a user-friendly format.
+4. Create a `.env` file and add your tokens/keys:
 
-Key Functions: fetching weather by city name.
+   ```
+   WEATHER_BOT_TOKEN="..."
+   DATABASE_BOT_TOKEN="..."
+   OPENWEATHER_API_KEY="..."
+   ```
 
-🛠️ How to Run the Projects
-Clone the repository: git clone [repository address].
+5. Run a bot of your choice:
 
-Navigate to the project folder: cd telegram-bots.
+   ```bash
+   python weather_bot.py
+   ```
 
-Create and activate a virtual environment.
+   or
 
-Install the dependencies: pip install -r requirements.txt.
-
-Create a .env file in the root directory and add your tokens:
-
-WEATHER_BOT_TOKEN="YOUR_TELEGRAM_BOT_TOKEN_1"
-DATABASE_BOT_TOKEN="YOUR_TELEGRAM_BOT_TOKEN_2"
-OPENWEATHER_API_KEY="YOUR_OPENWEATHER_API_KEY"
-Run any bot with the command: python bot_name.py.
-
-💬 Contact Information
-I am open to new opportunities and projects. Feel free to connect with me via Telegram or email.
+   ```bash
+   python database_bot.py
+   ```
+````
