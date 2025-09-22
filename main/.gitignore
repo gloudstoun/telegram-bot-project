@@ -1,11 +1,34 @@
-# DB file
-users_list.db
+# DB files
+*.db
 
 # Content directory
 content/
 
-# Environment file
+# Environment files
 *.env
 *.png
 *.jpg
 *.txt
+
+# Logs
+*.log
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
