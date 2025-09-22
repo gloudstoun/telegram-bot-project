@@ -92,3 +92,9 @@ This repository serves as a showcase of my progress in backend development and P
    ```bash
    python database_bot.py
    ```
+
+   or
+
+   ```bash
+   python network_bot.py
+   ```
