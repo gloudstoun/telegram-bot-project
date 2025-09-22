@@ -6,31 +6,31 @@ import os
 import logging
 from dotenv import load_dotenv
 
-# --- Настройки ---
+# --- Settings ---
 load_dotenv()
 
-TOKEN = os.getenv("DATABASE_BOT_TOKEN")  # Токен бота из .env файла
-MIN_PASSWORD_LENGTH = 8  # Минимальная длина пароля
-BOT_PHOTO = "database_bot_photo.png"  # Имя файла с фото бота
+TOKEN = os.getenv("DATABASE_BOT_TOKEN")  # Bot token from .env file
+MIN_PASSWORD_LENGTH = 8  # Minimum password length
+BOT_PHOTO = "database_bot_photo.png"  # Bot photo file name
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # Директория скрипта
-CONTENT_DIR = os.path.join(SCRIPT_DIR, "content")  # Директория с контентом
-DB_FILE = os.path.join(SCRIPT_DIR, "users_list.db")  # Файл базы данных
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # Script directory
+CONTENT_DIR = os.path.join(SCRIPT_DIR, "content")  # Content directory
+DB_FILE = os.path.join(SCRIPT_DIR, "users_list.db")  # Database file
 
 if not TOKEN:
     raise ValueError(
-        "Не установлена переменная окружения DATABASE_BOT_TOKEN. Создайте файл .env и добавьте в него DATABASE_BOT_TOKEN."
+        "DATABASE_BOT_TOKEN environment variable is not set. Create a .env file and add DATABASE_BOT_TOKEN to it."
     )
 
 bot = telebot.TeleBot(TOKEN)
 
 
-# --- Управление базой данных ---
+# --- Database Management ---
 
 
 def init_db():
     """
-    Инициализирует базу данных и создает таблицу, если ее нет.
+    Initializes the database and creates the table if it doesn't exist.
 
     Args:
         None
@@ -38,6 +38,8 @@ def init_db():
     Returns:
         None
     """
+    conn = None
+    cur = None
     try:
         conn = sqlite3.connect(DB_FILE)
         cur = conn.cursor()
@@ -51,9 +53,9 @@ def init_db():
         """
         )
         conn.commit()
-        logging.info("База данных успешно инициализирована")
+        logging.info("Database successfully initialized")
     except sqlite3.Error as e:
-        logging.error(f"Ошибка при инициализации БД: {e}")
+        logging.error(f"Error initializing database: {e}")
         raise
     finally:
         if cur:
@@ -64,58 +66,59 @@ def init_db():
 
 def hash_password(password):
     """
-    Хэширует пароль с помощью SHA-256.
+    Hashes password using SHA-256.
 
     Args:
-        password (str): Пароль для хэширования
+        password (str): Password to hash
 
     Returns:
-        str: Хэшированный пароль
+        str: Hashed password
     """
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def add_user(name, password):
     """
-    Добавляет нового пользователя в базу данных, если имя не занято.
+    Adds a new user to the database if the name is not taken.
 
     Args:
-        name (str): Имя пользователя
-        password (str): Пароль пользователя
+        name (str): Username
+        password (str): User password
 
     Returns:
-        bool: True если пользователь успешно добавлен, False если имя уже занято
+        bool: True if user successfully added, False if name already taken
     """
+    conn = None
+    cur = None
     try:
         conn = sqlite3.connect(DB_FILE)
         cur = conn.cursor()
-
         pass_hash = hash_password(password)
         cur.execute("INSERT INTO users (name, pass_hash) VALUES (?, ?)", (name, pass_hash))
         conn.commit()
     except sqlite3.IntegrityError:
-        logging.warning("Имя уже занято")
-        return False  # Имя уже занято
+        logging.warning("Name already taken")
+        return False  # Name already taken
     except sqlite3.Error as e:
-        logging.error(f"Ошибка при добавлении пользователя: {e}")
-        return False  # Ошибка при добавлении пользователя
+        logging.error(f"Error adding user: {e}")
+        return False  # Error adding user
     finally:
         if cur:
             cur.close()
         if conn:
             conn.close()
-    return True  # Пользователь успешно добавлен
+    return True  # User successfully added
 
 
 def is_name_taken(name):
     """
-    Проверяет, занято ли имя пользователя в базе данных.
+    Checks if username is taken in the database.
 
     Args:
-        name (str): Имя пользователя для проверки
+        name (str): Username to check
 
     Returns:
-        bool: True если имя занято, иначе False
+        bool: True if name is taken, otherwise False
     """
     try:
         conn = sqlite3.connect(DB_FILE)
@@ -124,7 +127,7 @@ def is_name_taken(name):
         is_taken = cur.fetchone() is not None
         return is_taken
     except sqlite3.Error as e:
-        logging.error(f"Ошибка при проверке занятости имени: {e}")
+        logging.error(f"Error checking name availability: {e}")
         return False
     finally:
         cur.close()
@@ -133,13 +136,13 @@ def is_name_taken(name):
 
 def get_all_users():
     """
-    Получает список всех пользователей из базы данных.
+    Gets list of all users from the database.
 
     Args:
         None
 
     Returns:
-        list of tuples: Список пользователей в формате (id, name)
+        list of tuples: List of users in format (id, name)
     """
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
@@ -150,24 +153,24 @@ def get_all_users():
     return users
 
 
-# --- Обработчики команд Telegram ---
+# --- Telegram Command Handlers ---
 
 
 def get_main_keyboard():
     """
-    Создает основную клавиатуру бота.
+    Creates the main bot keyboard.
 
     Args:
         None
 
     Returns:
-        telebot.types.ReplyKeyboardMarkup: Клавиатура с основными командами
+        telebot.types.ReplyKeyboardMarkup: Keyboard with main commands
     """
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     buttons = [
-        types.KeyboardButton("👤 Регистрация"),
-        types.KeyboardButton("📋 Список пользователей"),
-        types.KeyboardButton("❓ Помощь"),
+        types.KeyboardButton("👤 Registration"),
+        types.KeyboardButton("📋 User List"),
+        types.KeyboardButton("❓ Help"),
     ]
     markup.add(*buttons)
     return markup
@@ -175,16 +178,16 @@ def get_main_keyboard():
 
 def get_back_keyboard():
     """
-    Создает клавиатуру с кнопкой "Назад".
+    Creates keyboard with "Back" button.
 
     Args:
         None
 
     Returns:
-        telebot.types.ReplyKeyboardMarkup: Клавиатура с кнопкой "Назад"
+        telebot.types.ReplyKeyboardMarkup: Keyboard with "Back" button
     """
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-    back_button = types.KeyboardButton("🔙 Назад")
+    back_button = types.KeyboardButton("🔙 Back")
     markup.add(back_button)
     return markup
 
@@ -192,15 +195,15 @@ def get_back_keyboard():
 @bot.message_handler(commands=["start"])
 def start_command(message):
     """
-    Приветствие пользователя и показ клавиатуры с командами.
+    Greets the user and shows keyboard with commands.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя
+        message (telebot.types.Message): Message from user
 
     Returns:
         None
     """
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
     markup_main = get_main_keyboard()
 
     try:
@@ -209,13 +212,13 @@ def start_command(message):
         with open(photo_path, "rb") as file:
             bot.send_photo(message.chat.id, file)
     except FileNotFoundError:
-        logging.warning("Фото для команды /start не найдено.")
+        logging.warning("Photo for /start command not found.")
 
     bot.send_message(
         message.chat.id,
-        f"<b>Привет</b>, <em>{message.from_user.first_name}</em>, <b>тебя приветствует SimpleRegistryBot!</b>\n"
-        f"Этот бот позволяет регистрировать пользователей и хранить их в базе данных SQLite.\n"
-        f"Используй кнопки ниже или введи команду для начала работы.",
+        f"<b>Hello</b>, <em>{message.from_user.first_name}</em>, <b>welcome to SimpleRegistryBot!</b>\n"
+        f"This bot allows you to register users and store them in an SQLite database.\n"
+        f"Use the buttons below or enter a command to start working.",
         parse_mode="html",
         reply_markup=markup_main,
     )
@@ -223,23 +226,23 @@ def start_command(message):
 
 def is_valid_name(name):
     """
-    Проверяет, что имя состоит только из букв и не пустое.
+    Checks that name contains only letters and is not empty.
 
     Args:
-        name (str): Имя для проверки
+        name (str): Name to check
 
     Returns:
-        bool: True если имя валидно, иначе False
+        bool: True if name is valid, otherwise False
     """
     return bool(name) and name.isalpha()
 
 
 def process_name_step(message):
     """
-    Обрабатывает ввод имени пользователя.
+    Processes username input.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя с именем
+        message (telebot.types.Message): Message from user with name
 
     Returns:
         None
@@ -248,12 +251,12 @@ def process_name_step(message):
     markup_back = get_back_keyboard()
     markup_main = get_main_keyboard()
 
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
 
-    if message.text == "🔙 Назад" or message.text == "/back":
+    if message.text == "🔙 Back" or message.text == "/back":
         bot.send_message(
             message.chat.id,
-            "Вы вернулись в главное меню. Введите /help для списка доступных команд.",
+            "You returned to the main menu. Enter /help for list of available commands.",
             reply_markup=markup_main,
         )
         return
@@ -262,7 +265,7 @@ def process_name_step(message):
     if is_name_taken(username):
         bot.send_message(
             message.chat.id,
-            "Это имя уже занято. Попробуйте другое: ",
+            "This name is already taken. Try another one: ",
             reply_markup=markup_back,
         )
         bot.register_next_step_handler(message, process_name_step)
@@ -271,13 +274,13 @@ def process_name_step(message):
     if not is_valid_name(username):
         bot.send_message(
             message.chat.id,
-            "Имя не может быть пустым и должно содержать только буквы. Попробуйте снова:",
+            "Name cannot be empty and must contain only letters. Try again:",
             reply_markup=markup_back,
         )
         bot.register_next_step_handler(message, process_name_step)
         return
 
-    response_message = "Отлично! Теперь введите пароль (минимум 8 символов, буквы и цифры):"
+    response_message = "Great! Now enter a password (minimum 8 characters, letters and numbers):"
 
     bot.send_message(message.chat.id, response_message, reply_markup=markup_back)
     bot.register_next_step_handler(message, process_password_step, username)
@@ -285,13 +288,13 @@ def process_name_step(message):
 
 def is_strong_password(password):
     """
-    Проверяет надежность пароля: минимум 8 символов, буквы и цифры.
+    Checks password strength: minimum 8 characters, letters and numbers.
 
     Args:
-        password (str): Пароль для проверки
+        password (str): Password to check
 
     Returns:
-        bool: True если пароль надежный, иначе False
+        bool: True if password is strong, otherwise False
     """
     if len(password) < MIN_PASSWORD_LENGTH:
         return False
@@ -302,11 +305,11 @@ def is_strong_password(password):
 
 def process_password_step(message, username):
     """
-    Обрабатывает пароль и завершает регистрацию.
+    Processes password and completes registration.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя с паролем
-        username (str): Имя пользователя, введенное ранее
+        message (telebot.types.Message): Message from user with password
+        username (str): Username entered earlier
 
     Returns:
         None
@@ -315,12 +318,12 @@ def process_password_step(message, username):
     markup_back = get_back_keyboard()
     markup_main = get_main_keyboard()
 
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
 
-    if message.text == "🔙 Назад" or message.text == "/back":
+    if message.text == "🔙 Back" or message.text == "/back":
         bot.send_message(
             message.chat.id,
-            "Вы вернулись в главное меню. Введите /help для списка доступных команд.",
+            "You returned to the main menu. Enter /help for list of available commands.",
             reply_markup=markup_main,
         )
         return
@@ -329,38 +332,38 @@ def process_password_step(message, username):
     if not is_strong_password(password):
         bot.send_message(
             message.chat.id,
-            "Пароль должен быть не менее 8 символов и содержать буквы и цифры. Попробуйте снова:",
+            "Password must be at least 8 characters and contain letters and numbers. Try again:",
             reply_markup=markup_back,
         )
         bot.register_next_step_handler(message, process_password_step, username)
         return
 
     if add_user(username, password):
-        response_message = f"Пользователь <b>{username}</b> успешно зарегистрирован!"
+        response_message = f"User <b>{username}</b> successfully registered!"
     else:
-        response_message = "Ошибка при регистрации. Попробуйте снова."
+        response_message = "Registration error. Please try again."
 
     bot.send_message(message.chat.id, response_message, reply_markup=markup_main, parse_mode="HTML")
 
 
 def help_command(message):
     """
-    Отправляет пользователю список доступных команд.
+    Sends user a list of available commands.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя, содержащее команду
+        message (telebot.types.Message): Message from user containing command
 
     Returns:
         None
     """
     markup_main = get_main_keyboard()
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
 
-    message_info = f"""<b>Доступные команды:</b>
-    /help - Показать это сообщение
-    /start - Перезапустить бота и показать главное меню
-    /registration - Начать процесс регистрации нового пользователя
-    /list - Показать список всех зарегистрированных пользователей
+    message_info = f"""<b>Available commands:</b>
+    /help - Show this message
+    /start - Restart bot and show main menu
+    /registration - Start new user registration process
+    /list - Show list of all registered users
     """
 
     bot.send_message(message.chat.id, message_info, parse_mode="HTML", reply_markup=markup_main)
@@ -369,50 +372,48 @@ def help_command(message):
 @bot.message_handler(content_types=["text"])
 def handle_text(message):
     """
-    Обрабатывает текстовые сообщения от пользователей.
+    Handles text messages from users.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя
+        message (telebot.types.Message): Message from user
 
     Returns:
         None
     """
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
     markup_main = get_main_keyboard()
     markup_back = get_back_keyboard()
 
-    if message.text == "👤 Регистрация" or message.text == "/registration":
-        bot.send_message(message.chat.id, "Пожалуйста, введите ваше имя (только буквы):", reply_markup=markup_back)
+    if message.text == "👤 Registration" or message.text == "/registration":
+        bot.send_message(message.chat.id, "Please enter your name (letters only):", reply_markup=markup_back)
         bot.register_next_step_handler(message, process_name_step)
-    elif message.text == "📋 Список пользователей" or message.text == "/list":
+    elif message.text == "📋 User List" or message.text == "/list":
         users = get_all_users()
         if not users:
-            info = "В базе данных пока нет пользователей."
+            info = "No users in database yet."
         else:
-            info = "Зарегистрированные пользователи:\n\n"
+            info = "Registered users:\n\n"
             for user_id, name in users:
-                info += f"ID: {user_id}, Имя: {name}\n"
+                info += f"ID: {user_id}, Name: {name}\n"
         bot.send_message(message.chat.id, info, reply_markup=markup_main)
-    elif message.text == "❓ Помощь" or message.text == "/help":
+    elif message.text == "❓ Help" or message.text == "/help":
         help_command(message)
     else:
-        bot.reply_to(
-            message, "Неизвестная команда. Введите /help для списка доступных команд.", reply_markup=markup_main
-        )
+        bot.reply_to(message, "Unknown command. Enter /help for list of available commands.", reply_markup=markup_main)
 
 
-# --- Основная логика запуска ---
+# --- Main Launch Logic ---
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     init_db()
-    logging.info("Бот для работы с БД запущен...")
+    logging.info("Database bot started...")
     try:
         bot.infinity_polling()
     except Exception as e:
-        logging.error(f"Бот остановлен из-за ошибки: {e}")
+        logging.error(f"Bot stopped due to error: {e}")
     except KeyboardInterrupt:
-        logging.info("Бот остановлен пользователем.")
+        logging.info("Bot stopped by user.")
     finally:
-        logging.info("Бот остановлен.")
+        logging.info("Bot stopped.")
