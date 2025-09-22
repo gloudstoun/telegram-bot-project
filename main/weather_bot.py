@@ -4,27 +4,23 @@ import os
 import logging
 from dotenv import load_dotenv
 
-# --- Настройки логирования ---
+# --- Logging setup ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- Загрузка переменных окружения ---
+# --- Load environment variables ---
 load_dotenv()
 
 TOKEN = os.getenv("WEATHER_BOT_TOKEN")
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
-# Проверка наличия необходимых переменных
+# Check for required environment variables
 if not TOKEN:
-    raise ValueError(
-        "Не установлена переменная окружения WEATHER_BOT_TOKEN. "
-        "Создайте файл .env и добавьте в него WEATHER_BOT_TOKEN."
-    )
+    raise ValueError("WEATHER_BOT_TOKEN environment variable not set. " "Create a .env file and add WEATHER_BOT_TOKEN.")
 
 if not API_KEY:
     raise ValueError(
-        "Не установлена переменная окружения OPENWEATHER_API_KEY. "
-        "Создайте файл .env и добавьте в него OPENWEATHER_API_KEY."
+        "OPENWEATHER_API_KEY environment variable not set. " "Create a .env file and add OPENWEATHER_API_KEY."
     )
 
 WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
@@ -35,10 +31,10 @@ bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=["start"])
 def send_welcome(message):
-    """Отправляет приветственное сообщение и фото бота."""
-    logger.info(f"Пользователь {message.from_user.id} запустил бота")
+    """Sends a welcome message and a bot photo."""
+    logger.info(f"User {message.from_user.id} started the bot.")
 
-    welcome_text = "Привет! Я Weather Bot. 🌤️\n" "Отправь мне название города, и я пришлю тебе текущую погоду там."
+    welcome_text = "Hello! I'm Weather Bot. 🌤️\n" "Send me a city name, and I'll send you the current weather there."
 
     try:
         if os.path.exists(BOT_PHOTO_PATH):
@@ -47,82 +43,80 @@ def send_welcome(message):
         else:
             bot.send_message(message.chat.id, welcome_text)
     except Exception as e:
-        logger.error(f"Ошибка при отправке приветствия: {e}")
+        logger.error(f"Error sending welcome message: {e}")
         bot.send_message(message.chat.id, welcome_text)
 
 
 @bot.message_handler(content_types=["text"])
 def send_weather(message):
-    """Отправляет текущую погоду для указанного города."""
+    """Sends the current weather for the specified city."""
     city_name = message.text.strip()
 
     if not city_name:
-        bot.reply_to(message, "Пожалуйста, введите название города.")
+        bot.reply_to(message, "Please enter a city name.")
         return
 
-    logger.info(f"Запрос погоды для города: {city_name}")
+    logger.info(f"Weather request for city: {city_name}")
 
     try:
-        # Параметры запроса
+        # Request parameters
         params = {
             "q": city_name,
             "appid": API_KEY,
             "units": "metric",
-            "lang": "ru",  # Для получения описания на русском языке
+            "lang": "en",
         }
 
         response = requests.get(WEATHER_URL, params=params, timeout=10)
-
-        if response.status_code == 404:
-            logger.warning(f"Город '{city_name}' не найден.")
-            bot.reply_to(message, f"Город '{city_name}' не найден. Проверьте правильность названия.")
-            return
-        elif response.status_code != 200:
-            logger.error(f"Ошибка API: {response.status_code}")
-            bot.reply_to(message, "Произошла ошибка при получении данных о погоде. Попробуйте позже.")
-            logger.error(f"API ошибка: {response.status_code}")
-            return
+        response.raise_for_status()
 
         data = response.json()
 
-        # Формируем красивый ответ
+        # Format the beautiful response
         weather_info = (
-            f"🌍 Погода в городе {data['name']}, {data['sys']['country']}\n\n"
-            f"🌡️ Температура: {data['main']['temp']:.1f}°C\n"
-            f"🤔 Ощущается как: {data['main']['feels_like']:.1f}°C\n"
-            f"📊 Влажность: {data['main']['humidity']}%\n"
-            f"🌤️ Описание: {data['weather'][0]['description'].capitalize()}\n"
-            f"💨 Скорость ветра: {data['wind'].get('speed', 'N/A')} м/с"
+            f"🌍 Weather in {data['name']}, {data['sys']['country']}\n\n"
+            f"🌡️ Temperature: {data['main']['temp']:.1f}°C\n"
+            f"🤔 Feels like: {data['main']['feels_like']:.1f}°C\n"
+            f"📊 Humidity: {data['main']['humidity']}%\n"
+            f"🌤️ Description: {data['weather'][0]['description'].capitalize()}\n"
+            f"💨 Wind speed: {data['wind'].get('speed', 'N/A')} m/s"
         )
 
         bot.reply_to(message, weather_info)
-        logger.info(f"Отправлена погода для {city_name}")
+        logger.info(f"Weather sent for {city_name}")
 
+    except requests.exceptions.HTTPError as http_err:
+        if http_err.response.status_code == 404:
+            logger.warning(f"City '{city_name}' not found.")
+            bot.reply_to(message, f"City '{city_name}' not found. Please check the spelling.")
+        else:
+            logger.error(f"HTTP error: {http_err}")
+            bot.reply_to(message, "An error occurred while fetching weather data. Please try again later.")
     except requests.exceptions.Timeout:
-        bot.reply_to(message, "Превышено время ожидания ответа. Попробуйте позже.")
+        bot.reply_to(message, "The request timed out. Please try again later.")
     except requests.exceptions.RequestException as e:
-        bot.reply_to(message, "Ошибка при запросе данных о погоде.")
-        logger.error(f"Ошибка запроса: {e}")
+        bot.reply_to(message, "An error occurred during the weather data request.")
+        logger.error(f"Request error: {e}")
     except KeyError as e:
-        bot.reply_to(message, "Ошибка при обработке данных о погоде.")
-        logger.error(f"Ключ не найден в ответе API: {e}")
+        bot.reply_to(message, "An error occurred while processing weather data.")
+        logger.error(f"Key not found in API response: {e}")
     except Exception as e:
-        bot.reply_to(message, "Произошла неожиданная ошибка.")
-        logger.error(f"Неожиданная ошибка: {e}")
+        bot.reply_to(message, "An unexpected error occurred.")
+        logger.error(f"Unexpected error: {e}")
 
 
 def main():
-    """Основная функция для запуска бота."""
-    logger.info("Запуск Weather Bot...")
+    """Main function to run the bot."""
+    logger.info("Starting Weather Bot...")
 
     try:
         bot.polling(none_stop=True)
     except KeyboardInterrupt:
-        logger.info("Бот остановлен пользователем")
+        logger.info("Bot stopped by user.")
     except Exception as e:
-        logger.error(f"Ошибка при работе бота: {e}")
+        logger.error(f"Error while running the bot: {e}")
     finally:
-        logger.info("Weather Bot остановлен")
+        logger.info("Weather Bot stopped.")
 
 
 if __name__ == "__main__":
