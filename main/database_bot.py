@@ -120,6 +120,8 @@ def is_name_taken(name):
     Returns:
         bool: True if name is taken, otherwise False
     """
+    conn = None
+    cur = None
     try:
         conn = sqlite3.connect(DB_FILE)
         cur = conn.cursor()
@@ -130,8 +132,10 @@ def is_name_taken(name):
         logging.error(f"Error checking name availability: {e}")
         return False
     finally:
-        cur.close()
-        conn.close()
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 def get_all_users():
