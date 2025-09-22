@@ -9,37 +9,36 @@ import re
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 
-# --- Настройки ---
-
+# --- Settings ---
 
 load_dotenv()
-TOKEN = os.getenv("NETWORK_BOT_TOKEN")  # Токен бота из .env файла
-CONTENT_DIR = "content"  # Папка для хранения контента бота
-BOT_PHOTO = "network_bot_photo.png"  # Имя файла с фото бота
-REQUEST_TIMEOUT = 5  # Таймаут для HTTP-запросов в секундах
-SOCKET_TIMEOUT = 1  # Таймаут для сокетов в секундах
+TOKEN = os.getenv("NETWORK_BOT_TOKEN")  # Bot token from .env file
+CONTENT_DIR = "content"  # Directory for storing bot content
+BOT_PHOTO = "network_bot_photo.png"  # Bot photo file name
+REQUEST_TIMEOUT = 5  # HTTP request timeout in seconds
+SOCKET_TIMEOUT = 1  # Socket timeout in seconds
 DNS_IP = "8.8.8.8"  # Google Public DNS
-DNS_PORT = 53  # DNS порт
+DNS_PORT = 53  # DNS port
 
 if not TOKEN:
     raise ValueError(
-        "Не установлена переменная окружения NETWORK_BOT_TOKEN. Создайте файл .env и добавьте в него NETWORK_BOT_TOKEN."
+        "NETWORK_BOT_TOKEN environment variable is not set. Create a .env file and add NETWORK_BOT_TOKEN to it."
     )
 
 bot = telebot.TeleBot(TOKEN)
 
-# --- Функции валидации ---
+# --- Validation Functions ---
 
 
 def validate_ip(ip):
     """
-    Проверяет корректность IP-адреса (IPv4 или IPv6).
+    Validates IP address (IPv4 or IPv6).
 
     Args:
-        ip (str): IP-адрес для проверки
+        ip (str): IP address to validate
 
     Returns:
-        bool: True если IP корректный, False иначе
+        bool: True if IP is valid, False otherwise
     """
     try:
         ipaddress.ip_address(ip)
@@ -50,13 +49,13 @@ def validate_ip(ip):
 
 def validate_port(port):
     """
-    Проверяет корректность номера порта.
+    Validates port number.
 
     Args:
-        port (int): Номер порта для проверки
+        port (int): Port number to validate
 
     Returns:
-        bool: True если порт корректный, False иначе
+        bool: True if port is valid, False otherwise
     """
     try:
         port_int = int(port)
@@ -67,21 +66,21 @@ def validate_port(port):
 
 def validate_url(url):
     """
-    Проверяет корректность URL.
+    Validates URL format.
 
     Args:
-        url (str): URL для проверки
+        url (str): URL to validate
 
     Returns:
-        bool: True если URL корректный, False иначе
+        bool: True if URL is valid, False otherwise
     """
     try:
-        # Добавляем протокол если его нет
+        # Add protocol if missing
         if not url.startswith(("http://", "https://")):
             url = "http://" + url
 
         parsed = urlparse(url)
-        # Проверяем что есть домен и он не пустой
+        # Check that domain exists and is not empty
         return bool(parsed.netloc) and "." in parsed.netloc
     except Exception:
         return False
@@ -89,38 +88,38 @@ def validate_url(url):
 
 def validate_domain(domain):
     """
-    Проверяет корректность доменного имени.
+    Validates domain name format.
 
     Args:
-        domain (str): Доменное имя для проверки
+        domain (str): Domain name to validate
 
     Returns:
-        bool: True если домен корректный, False иначе
+        bool: True if domain is valid, False otherwise
     """
-    # Простая проверка домена: содержит точки, не пустой, допустимые символы
+    # Simple domain validation: contains dots, not empty, valid characters
     if not domain or len(domain) > 253:
         return False
 
-    # Проверяем что домен содержит только допустимые символы
+    # Check that domain contains only valid characters
     domain_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"
     return bool(re.match(domain_pattern, domain))
 
 
-# --- Функции-обработчики ---
+# --- Handler Functions ---
 
 
 def get_main_keyboard():
     """
-    Создает основную клавиатуру бота
+    Creates the main bot keyboard.
 
     Args:
         None
 
     Returns:
-        types.ReplyKeyboardMarkup: Клавиатура с кнопками
+        types.ReplyKeyboardMarkup: Keyboard with buttons
     """
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    buttons = [types.KeyboardButton("🌐 Google"), types.KeyboardButton("🔍 DNS"), types.KeyboardButton("❓ Помощь")]
+    buttons = [types.KeyboardButton("🌐 Google"), types.KeyboardButton("🔍 DNS"), types.KeyboardButton("❓ Help")]
     markup.add(*buttons)
     return markup
 
@@ -128,15 +127,15 @@ def get_main_keyboard():
 @bot.message_handler(commands=["start"])
 def start_command(message):
     """
-    Приветствие пользователя и показ клавиатуры с командами.
+    Greets the user and shows keyboard with commands.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя
+        message (telebot.types.Message): Message from user
 
     Returns:
         None
     """
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
 
     markup = get_main_keyboard()
 
@@ -146,20 +145,20 @@ def start_command(message):
 
         if not os.path.exists(content_dir):
             os.makedirs(content_dir)
-            logging.warning(f"Создана папка {content_dir}")
+            logging.warning(f"Created directory {content_dir}")
 
         photo_path = os.path.join(content_dir, BOT_PHOTO)
         with open(photo_path, "rb") as file:
             bot.send_photo(message.chat.id, file)
     except FileNotFoundError:
-        logging.warning(f"Фото не найдено по пути: {photo_path}")
+        logging.warning(f"Photo not found at path: {photo_path}")
     except Exception as e:
-        logging.error(f"Ошибка при отправке фото: {e}")
+        logging.error(f"Error sending photo: {e}")
 
     bot.send_message(
         message.chat.id,
-        f"<b>Привет</b>, <em>{message.from_user.first_name}</em>, <b>тебя приветствует SocketSentryBot!</b>\n"
-        "Я твой помощник для сетевой диагностики. Введи /help для списка команд.",
+        f"<b>Hello</b>, <em>{message.from_user.first_name}</em>, <b>welcome to SocketSentryBot!</b>\n"
+        "I'm your network diagnostic assistant. Type /help for list of commands.",
         parse_mode="html",
         reply_markup=markup,
     )
@@ -168,15 +167,15 @@ def start_command(message):
 @bot.message_handler(commands=["check"])
 def check_command(message):
     """
-    Проверяет доступность указанного веб-сайта.
+    Checks availability of specified website.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя, содержащее команду и URL сайта
+        message (telebot.types.Message): Message from user containing command and site URL
 
     Returns:
         None
     """
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
 
     markup = get_main_keyboard()
     response_message = ""
@@ -184,64 +183,73 @@ def check_command(message):
     try:
         url = message.text.split()[1]
 
-        # Валидация URL
+        # URL validation
         if not validate_url(url):
-            response_message = "❌ Неверный формат URL. Пример: /check google.com"
+            response_message = "❌ Invalid URL format. Example: /check google.com"
             bot.send_message(message.chat.id, response_message, reply_markup=markup)
             return
 
         if not url.startswith("http"):
             url = "http://" + url
 
-        bot.reply_to(message, f"Проверяю сайт {url}...")
+        bot.reply_to(message, f"Checking site {url}...")
         response = requests.get(url, timeout=REQUEST_TIMEOUT)
 
         if response.status_code == 200:
-            response_message = f"✅ Сайт доступен. Статус: {response.status_code} OK"
+            response_message = f"✅ Site is available. Status: {response.status_code} OK"
         else:
-            response_message = f"⚠️ Сайт ответил. Статус: {response.status_code}"
+            response_message = f"⚠️ Site responded. Status: {response.status_code}"
 
     except IndexError:
-        response_message = "Пожалуйста, укажите адрес сайта после команды. Пример: /check google.com"
+        response_message = "Please specify site address after command. Example: /check google.com"
     except requests.ConnectionError:
-        url_to_report = message.text.split()[1] if len(message.text.split()) > 1 else "указанный сайт"
-        response_message = f"❌ Ошибка: Не удалось подключиться к сайту {url_to_report}."
+        url_to_report = message.text.split()[1] if len(message.text.split()) > 1 else "specified site"
+        response_message = f"❌ Error: Could not connect to site {url_to_report}."
     except requests.Timeout:
-        response_message = "⏰ Таймаут: Сайт не отвечает в течение 5 секунд."
+        response_message = "⏰ Timeout: Site does not respond within 5 seconds."
     except Exception as e:
-        response_message = f"Произошла непредвиденная ошибка: {e}"
+        response_message = f"An unexpected error occurred: {e}"
 
     bot.send_message(message.chat.id, response_message, reply_markup=markup)
 
 
 def check_port(ip, port):
     """
-    Проверяет, открыт ли TCP-порт на указанном IP-адресе.
+    Checks if TCP port is open on specified IP address.
 
     Args:
-        ip (str): IP-адрес для проверки
-        port (int): Номер порта
+        ip (str): IP address to check
+        port (int): Port number
 
     Returns:
-        bool: True если порт открыт, False если закрыт"""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        bool: True if port is open, False if closed
+    """
+    sock = None
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(SOCKET_TIMEOUT)
         result = sock.connect_ex((ip, port))
-        return result == 0  # Возвращает True, если порт открыт
+        return result == 0  # Returns True if port is open
+    except Exception as e:
+        logging.error(f"Error checking port {port} on {ip}: {e}")
+        return False
+    finally:
+        if sock:
+            sock.close()
 
 
 @bot.message_handler(commands=["portscan"])
 def portscan_command(message):
     """
-    Проверяет открытые порты на указанном IP-адресе.
+    Checks open ports on specified IP address.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя, содержащее команду, IP и порт
+        message (telebot.types.Message): Message from user containing command, IP and port
 
     Returns:
         None
     """
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
 
     markup = get_main_keyboard()
     response_message = ""
@@ -249,37 +257,37 @@ def portscan_command(message):
     try:
         parts = message.text.split()
         if len(parts) < 3:
-            response_message = "Пожалуйста, укажите IP-адрес и порт. Пример: /portscan 8.8.8.8 53"
+            response_message = "Please specify IP address and port. Example: /portscan 8.8.8.8 53"
             bot.send_message(message.chat.id, response_message, reply_markup=markup)
             return
 
         ip = parts[1]
         port_str = parts[2]
 
-        # Валидация IP-адреса
+        # IP address validation
         if not validate_ip(ip):
-            response_message = f"❌ Неверный IP-адрес: {ip}. Пример: /portscan 8.8.8.8 53"
+            response_message = f"❌ Invalid IP address: {ip}. Example: /portscan 8.8.8.8 53"
             bot.send_message(message.chat.id, response_message, reply_markup=markup)
             return
 
-        # Валидация порта
+        # Port validation
         if not validate_port(port_str):
-            response_message = f"❌ Неверный номер порта: {port_str}. Порт должен быть от 1 до 65535."
+            response_message = f"❌ Invalid port number: {port_str}. Port must be between 1 and 65535."
             bot.send_message(message.chat.id, response_message, reply_markup=markup)
             return
 
         port = int(port_str)
-        bot.reply_to(message, f"Сканирую порт {port} на {ip}...")
+        bot.reply_to(message, f"Scanning port {port} on {ip}...")
 
         if check_port(ip, port):
-            response_message = f"✅ Порт {port} на {ip} открыт."
+            response_message = f"✅ Port {port} on {ip} is open."
         else:
-            response_message = f"❌ Порт {port} на {ip} закрыт."
+            response_message = f"❌ Port {port} on {ip} is closed."
 
     except (IndexError, ValueError) as e:
-        response_message = f"❌ Ошибка в параметрах: {e}. Пример: /portscan 8.8.8.8 53"
+        response_message = f"❌ Parameter error: {e}. Example: /portscan 8.8.8.8 53"
     except Exception as e:
-        response_message = f"Произошла ошибка: {e}"
+        response_message = f"An error occurred: {e}"
 
     bot.send_message(message.chat.id, response_message, reply_markup=markup)
 
@@ -287,23 +295,23 @@ def portscan_command(message):
 @bot.message_handler(commands=["help"])
 def help_command(message):
     """
-    Отправляет пользователю список доступных команд.
+    Sends user a list of available commands.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя, содержащее команду
+        message (telebot.types.Message): Message from user containing command
 
     Returns:
         None
     """
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
 
     message_info = f"""
-<b>Доступные команды:</b>
+<b>Available commands:</b>
 
-/start - Начать общение с ботом
-/help - Показать это сообщение
-/check &lt;website&gt; - Проверить HTTP-статус сайта
-/portscan &lt;ip-адрес&gt; &lt;порт&gt; - Проверить TCP-порт
+/start - Start communication with bot
+/help - Show this message
+/check &lt;website&gt; - Check HTTP status of website
+/portscan &lt;ip-address&gt; &lt;port&gt; - Check TCP port
     """
     bot.send_message(message.chat.id, message_info.strip(), parse_mode="html")
 
@@ -311,15 +319,15 @@ def help_command(message):
 @bot.message_handler(content_types=["text"])
 def handle_text(message):
     """
-    Обрабатывает текстовые сообщения от пользователей.
+    Handles text messages from users.
 
     Args:
-        message (telebot.types.Message): Сообщение от пользователя
+        message (telebot.types.Message): Message from user
 
     Returns:
         None
     """
-    logging.info(f"Получено сообщение от {message.from_user.username}: {message.text}")
+    logging.info(f"Received message from {message.from_user.username}: {message.text}")
 
     if message.text == "🌐 Google":
         message.text = "/check google.com"
@@ -327,23 +335,23 @@ def handle_text(message):
     elif message.text == "🔍 DNS":
         message.text = f"/portscan {DNS_IP} {DNS_PORT}"
         portscan_command(message)
-    elif message.text == "❓ Помощь":
+    elif message.text == "❓ Help":
         help_command(message)
     else:
-        bot.reply_to(message, "Неизвестная команда. Введите /help для списка доступных команд.")
+        bot.reply_to(message, "Unknown command. Type /help for list of available commands.")
 
 
-# --- Основная логика запуска ---
+# --- Main Launch Logic ---
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    logging.info("Бот для работы с сетями запущен...")
+    logging.info("Network diagnostic bot started...")
     try:
         bot.infinity_polling()
     except Exception as e:
-        logging.error(f"Бот остановлен из-за ошибки: {e}")
+        logging.error(f"Bot stopped due to error: {e}")
     except KeyboardInterrupt:
-        logging.info("Бот остановлен пользователем.")
+        logging.info("Bot stopped by user.")
     finally:
-        logging.info("Бот остановлен.")
+        logging.info("Bot stopped.")
