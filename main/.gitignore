@@ -8,7 +8,6 @@ content/
 *.env
 *.png
 *.jpg
-*.txt
 
 # Logs
 *.log
