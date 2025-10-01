@@ -56,7 +56,7 @@ To run any of the bots, follow these straightforward steps:
 1.  **Clone the repository:**
     ```bash
     git clone https://github.com/gloudstoun/telegram-bot-project.git
-    cd telegram-bot-project
+    cd telegram-bot-project\main
     ```
 
 2.  **Setup the environment:**
