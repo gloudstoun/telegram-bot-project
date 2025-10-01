@@ -49,52 +49,41 @@ This repository serves as a showcase of my progress in backend development and P
 ---
 
 
-````markdown
 ## 🚀 How to Run
-````
 
-1. Clone the repository:  
-   ```bash
-   git clone https://github.com/gloudstoun/telegram-bot-project.git
-   cd telegram-bot-project
+To run any of the bots, follow these straightforward steps:
 
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/gloudstoun/telegram-bot-project.git](https://github.com/gloudstoun/telegram-bot-project.git)
+    cd telegram-bot-project
+    ```
 
-2. Create and activate a virtual environment:
+2.  **Setup the environment:**
+    * Create and activate a virtual environment:
+        ```bash
+        python3 -m venv venv
+        source venv/bin/activate    # Linux / MacOS
+        venv\Scripts\activate       # Windows
+        ```
+    * Install required dependencies:
+        ```bash
+        pip install -r requirements.txt
+        ```
 
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate   # Linux / MacOS
-   venv\Scripts\activate      # Windows
-   ```
+3.  **Configuration (Tokens):**
+    * Create a file named **`.env`** in the project root.
+    * Add your bot tokens and API keys (obtained from BotFather and OpenWeatherMap, respectively):
+        ```
+        WEATHER_BOT_TOKEN="..."
+        DATABASE_BOT_TOKEN="..."
+        NETWORK_BOT_TOKEN="..."
+        OPENWEATHER_API_KEY="..."
+        ```
 
-3. Install dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Create a `.env` file and add your tokens/keys:
-
-   ```
-   WEATHER_BOT_TOKEN="..."
-   DATABASE_BOT_TOKEN="..."
-   OPENWEATHER_API_KEY="..."
-   ```
-
-5. Run a bot of your choice:
-
-   ```bash
-   python weather_bot.py
-   ```
-
-   or
-
-   ```bash
-   python database_bot.py
-   ```
-
-   or
-
-   ```bash
-   python network_bot.py
-   ```
+4.  **Run the bot:**
+    Execute the desired bot's script, for example:
+    ```bash
+    python weather_bot.py
+    ```
+    *(Other bots are available via: `database_bot.py` and `network_bot.py`.)*
