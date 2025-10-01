@@ -78,7 +78,7 @@ To run any of the bots, follow these straightforward steps:
         WEATHER_BOT_TOKEN="..."
         DATABASE_BOT_TOKEN="..."
         NETWORK_BOT_TOKEN="..."
-        OPENWEATHER_API_KEY="..."
+        OPENWEATHER_API_KEY="..." # Required for Weather Bot functionality
         ```
 
 4.  **Run the bot:**
